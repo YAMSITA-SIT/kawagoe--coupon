@@ -80,7 +80,7 @@ export const TimeCouponsTab: React.FC<TimeCouponsTabProps> = ({
   return (
     <div className="pb-8 space-y-4 bg-[#f9f9f9]">
       {/* Top Banner: Warm Orange/Gold Theme Fill */}
-      <div 
+      <div
         className="p-5 shadow-sm text-white transition-colors"
         style={{
           backgroundColor: 'var(--theme-primary)',
@@ -147,7 +147,7 @@ export const TimeCouponsTab: React.FC<TimeCouponsTabProps> = ({
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
               {/* Time slot discount badge */}
-              <div 
+              <div
                 className="absolute top-3 left-3 text-xs font-bold px-3 py-1 rounded-lg shadow-sm text-white"
                 style={{
                   backgroundColor: 'var(--theme-primary)',
@@ -187,7 +187,7 @@ export const TimeCouponsTab: React.FC<TimeCouponsTabProps> = ({
               </div>
 
               {/* Off-Peak Time Slot Highlight Box */}
-              <div 
+              <div
                 className="rounded-xl p-3 border border-amber-200/90 bg-amber-50/70 text-xs shadow-xs"
               >
                 <div className="flex items-center gap-1.5 font-bold text-amber-950">
