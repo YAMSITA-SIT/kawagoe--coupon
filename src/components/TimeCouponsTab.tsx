@@ -21,10 +21,58 @@ export const TimeCouponsTab: React.FC<TimeCouponsTabProps> = ({
 
   const timeCoupons = coupons.filter((c) => c.type === 'time');
 
+  const isCouponAvailableNow = (coupon: Coupon) => {
+    const now = new Date();
+    const day = now.getDay();
+    const isWeekend = day === 0 || day === 6;
+
+    if (coupon.dayRule === 'weekday_only' && isWeekend) {
+      return false;
+    }
+    if (coupon.dayRule === 'weekend_only' && !isWeekend) {
+      return false;
+    }
+    if (coupon.dayRule === 'weekend_holiday' && !isWeekend) {
+      return false;
+    }
+
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    const currentMinutes = hour * 60 + minute;
+
+    const startMinutes = coupon.startTime ? (() => {
+      const [hourText, minuteText] = coupon.startTime.split(':');
+      return Number(hourText) * 60 + Number(minuteText);
+    })() : null;
+    const endMinutes = coupon.endTime ? (() => {
+      const [hourText, minuteText] = coupon.endTime.split(':');
+      return Number(hourText) * 60 + Number(minuteText);
+    })() : null;
+
+    if (startMinutes !== null && endMinutes !== null) {
+      return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    }
+
+    const timeWindows = coupon.timeWindows && coupon.timeWindows.length > 0 ? coupon.timeWindows : ['afternoon'];
+    return timeWindows.some((slot) => {
+      if (slot === 'morning') {
+        return currentMinutes >= 8 * 60 && currentMinutes < 12 * 60;
+      }
+      if (slot === 'afternoon') {
+        return currentMinutes >= 13 * 60 && currentMinutes < 17 * 60;
+      }
+      if (slot === 'night') {
+        return currentMinutes >= 19 * 60 && currentMinutes < 22 * 60;
+      }
+      return true;
+    });
+  };
+
   const filtered = timeCoupons.filter((c) => {
     if (filterType === 'all') return true;
-    if (filterType === 'weekday' && c.timeSlotType === 'weekday_afternoon') return true;
-    if (filterType === 'night' && c.timeSlotType === 'evening_night') return true;
+    if (filterType === 'weekday' && c.dayRule === 'weekday_only') return true;
+    if (filterType === 'night' && (c.timeWindows ?? []).includes('night')) return true;
+    if (filterType === 'available-now' && isCouponAvailableNow(c)) return true;
     if (filterType === 'remote' && c.shop.walkingMinutes >= 12) return true;
     return true;
   });
@@ -56,6 +104,7 @@ export const TimeCouponsTab: React.FC<TimeCouponsTabProps> = ({
               { id: 'all', label: t.timeFilterAll },
               { id: 'weekday', label: t.timeFilterWeekday },
               { id: 'night', label: t.timeFilterNight },
+              { id: 'available-now', label: language === 'ja' ? '今すぐ使える' : 'Available now' },
               { id: 'remote', label: t.timeFilterRemote },
             ].map((item) => {
               const isActive = filterType === item.id;

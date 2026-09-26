@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { 
-  Search, 
-  Train, 
-  ChevronLeft, 
-  ChevronRight, 
-  X, 
-  MapPin 
+import {
+  Search,
+  Train,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  MapPin
 } from 'lucide-react';
 import { Coupon, Language, ThemeColorConfig } from '../types';
 import { translations } from '../data/translations';
@@ -114,9 +114,8 @@ export const KawagoeMapTab: React.FC<KawagoeMapTabProps> = ({
       el.className = 'cursor-pointer transition-all duration-300 transform -translate-x-1/2 -translate-y-full hover:scale-110';
       el.innerHTML = `
         <div class="flex flex-col items-center">
-          <div class="px-2.5 py-1.5 rounded-xl shadow-lg flex items-center gap-1 ${
-            isSelected ? 'ring-2 ring-stone-900 scale-105 bg-stone-900 text-white' : 'bg-white text-stone-900 border border-stone-300'
-          }">
+          <div class="px-2.5 py-1.5 rounded-xl shadow-lg flex items-center gap-1 ${isSelected ? 'ring-2 ring-stone-900 scale-105 bg-stone-900 text-white' : 'bg-white text-stone-900 border border-stone-300'
+        }">
             <div class="flex flex-col">
               <span class="text-[10px] font-bold tracking-tight whitespace-nowrap">
                 ${coupon.shop.nameJa.slice(0, 5)}...
@@ -166,7 +165,7 @@ export const KawagoeMapTab: React.FC<KawagoeMapTabProps> = ({
 
   return (
     <div className="relative h-[calc(100vh-125px)] w-full overflow-hidden flex flex-col bg-[#e5e3df]">
-      
+
       {/* ヘッダータイトル */}
       <div className="bg-white border-b border-stone-200/80 px-4 py-3 flex items-center justify-center shadow-2xs z-20 shrink-0">
         <h2 className="text-base font-bold text-stone-900 font-shippori">

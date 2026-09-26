@@ -49,7 +49,7 @@ export const FoodLossCouponsTab: React.FC<FoodLossCouponsTabProps> = ({
   return (
     <div className="pb-8 space-y-4 bg-[#f9f9f9]">
       {/* Top Banner: Warm Orange/Gold Theme Fill with Clean Japanese Typography */}
-      <div 
+      <div
         className="p-5 shadow-sm text-white transition-colors"
         style={{
           backgroundColor: 'var(--theme-primary)',
@@ -92,7 +92,7 @@ export const FoodLossCouponsTab: React.FC<FoodLossCouponsTabProps> = ({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
                 {/* Stamped discount tag */}
-                <div 
+                <div
                   className="absolute top-3 left-3 text-xs font-bold px-3 py-1 rounded-lg shadow-sm text-white"
                   style={{
                     backgroundColor: 'var(--theme-primary)',
@@ -102,9 +102,8 @@ export const FoodLossCouponsTab: React.FC<FoodLossCouponsTabProps> = ({
                 </div>
 
                 {/* Stock remaining badge */}
-                <div className={`absolute top-3 right-3 text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm ${
-                  isUrgent ? 'bg-amber-400 text-stone-950 font-black animate-pulse' : 'bg-white/95 text-stone-900'
-                }`}>
+                <div className={`absolute top-3 right-3 text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm ${isUrgent ? 'bg-amber-400 text-stone-950 font-black animate-pulse' : 'bg-white/95 text-stone-900'
+                  }`}>
                   <AlertTriangle className="w-3.5 h-3.5" />
                   <span>{t.foodLossStockLeft} {coupon.remainingStock} {t.foodLossStockUnit}</span>
                 </div>
@@ -148,7 +147,7 @@ export const FoodLossCouponsTab: React.FC<FoodLossCouponsTabProps> = ({
                 </p>
 
                 {/* Environmental rescue note */}
-                <div 
+                <div
                   className="rounded-xl p-2.5 flex items-center gap-2 text-xs border border-emerald-200/80 bg-emerald-50/70"
                 >
                   <Leaf className="w-4 h-4 text-emerald-600 shrink-0" />

@@ -30,9 +30,9 @@ export const CouponsTab: React.FC<CouponsTabProps> = ({
     const shopName = (language === 'ja' ? coupon.shop.nameJa : coupon.shop.nameEn).toLowerCase();
     const title = (language === 'ja' ? coupon.titleJa : coupon.titleEn).toLowerCase();
     const area = (language === 'ja' ? coupon.shop.areaJa : coupon.shop.areaEn).toLowerCase();
-    
+
     const matchesSearch = shopName.includes(query) || title.includes(query) || area.includes(query);
-    
+
     if (filterType === 'time') return matchesSearch && coupon.type === 'time';
     if (filterType === 'food_loss') return matchesSearch && coupon.type === 'food_loss';
     return matchesSearch;
@@ -47,7 +47,7 @@ export const CouponsTab: React.FC<CouponsTabProps> = ({
 
   return (
     <div className="pb-24 space-y-4 px-4 pt-3 max-w-md mx-auto">
-      
+
       {/* 画面タイトル */}
       <div className="text-center pb-1">
         <h2 className="text-sm font-bold text-stone-800 tracking-wider">
@@ -83,33 +83,30 @@ export const CouponsTab: React.FC<CouponsTabProps> = ({
         <button
           type="button"
           onClick={() => setFilterType('all')}
-          className={`py-2 rounded-xl transition-all text-center ${
-            filterType === 'all' 
-              ? 'bg-white text-stone-900 shadow-xs' 
+          className={`py-2 rounded-xl transition-all text-center ${filterType === 'all'
+              ? 'bg-white text-stone-900 shadow-xs'
               : 'text-stone-600 hover:text-stone-900'
-          }`}
+            }`}
         >
           すべて ({coupons.length})
         </button>
         <button
           type="button"
           onClick={() => setFilterType('time')}
-          className={`py-2 rounded-xl transition-all text-center px-1 ${
-            filterType === 'time' 
-              ? 'bg-white text-stone-900 shadow-xs' 
+          className={`py-2 rounded-xl transition-all text-center px-1 ${filterType === 'time'
+              ? 'bg-white text-stone-900 shadow-xs'
               : 'text-stone-600 hover:text-stone-900'
-          }`}
+            }`}
         >
           タイム ({timeCount})
         </button>
         <button
           type="button"
           onClick={() => setFilterType('food_loss')}
-          className={`py-2 rounded-xl transition-all text-center px-1 ${
-            filterType === 'food_loss' 
-              ? 'bg-white text-stone-900 shadow-xs' 
+          className={`py-2 rounded-xl transition-all text-center px-1 ${filterType === 'food_loss'
+              ? 'bg-white text-stone-900 shadow-xs'
               : 'text-stone-600 hover:text-stone-900'
-          }`}
+            }`}
         >
           フードロス ({foodLossCount})
         </button>
@@ -118,39 +115,36 @@ export const CouponsTab: React.FC<CouponsTabProps> = ({
       {/* 並び替えフィルター */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
         <span className="text-[11px] font-bold text-stone-500 flex items-center gap-1 shrink-0">
-          <ArrowUpDown className="w-3 h-3" /> 
+          <ArrowUpDown className="w-3 h-3" />
           {language === 'ja' ? '並び順:' : 'Sort:'}
         </span>
         <button
           type="button"
           onClick={() => setSortBy('near')}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
-            sortBy === 'near' 
-              ? 'bg-amber-600 text-white shadow-xs' 
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${sortBy === 'near'
+              ? 'bg-amber-600 text-white shadow-xs'
               : 'bg-white text-stone-700 border border-stone-200'
-          }`}
+            }`}
         >
           {language === 'ja' ? '近い順' : 'Nearest'}
         </button>
         <button
           type="button"
           onClick={() => setSortBy('deadline')}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
-            sortBy === 'deadline' 
-              ? 'bg-amber-600 text-white shadow-xs' 
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${sortBy === 'deadline'
+              ? 'bg-amber-600 text-white shadow-xs'
               : 'bg-white text-stone-700 border border-stone-200'
-          }`}
+            }`}
         >
           {language === 'ja' ? '締め切り順' : 'Deadline'}
         </button>
         <button
           type="button"
           onClick={() => setSortBy('discount')}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
-            sortBy === 'discount' 
-              ? 'bg-amber-600 text-white shadow-xs' 
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${sortBy === 'discount'
+              ? 'bg-amber-600 text-white shadow-xs'
               : 'bg-white text-stone-700 border border-stone-200'
-          }`}
+            }`}
         >
           {language === 'ja' ? '割引率順' : 'Highest Discount'}
         </button>
@@ -176,7 +170,7 @@ export const CouponsTab: React.FC<CouponsTabProps> = ({
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
               />
-              <div 
+              <div
                 className="absolute bottom-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded text-white shadow-xs"
                 style={{ backgroundColor: themeConfig.primaryHex }}
               >
@@ -209,7 +203,7 @@ export const CouponsTab: React.FC<CouponsTabProps> = ({
                   </span>
                 )}
                 <span className="text-[10px] font-semibold text-stone-600 ml-auto">
-                  {coupon.type === 'time' 
+                  {coupon.type === 'time'
                     ? (language === 'ja' ? coupon.timeSlotJa : coupon.timeSlotEn)
                     : `残り${coupon.remainingStock}点`}
                 </span>
