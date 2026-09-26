@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Clock, 
-  ShieldCheck, 
-  MapPin, 
-  Ticket, 
-  Barcode 
+import {
+  X,
+  Clock,
+  ShieldCheck,
+  MapPin,
+  Ticket,
+  Barcode
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Coupon, Language, ThemeColorConfig } from '../types';
@@ -53,12 +53,12 @@ export const CouponRedeemModal: React.FC<CouponRedeemModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl border border-stone-200 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-stone-900 animate-in slide-in-from-bottom duration-300">
-        
+
         {/* Top header bar */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-stone-100 bg-stone-50 shrink-0">
           <div className="flex items-center gap-2 truncate">
-            <span 
-              className="w-2.5 h-2.5 rounded-full" 
+            <span
+              className="w-2.5 h-2.5 rounded-full"
               style={{ backgroundColor: 'var(--theme-primary)' }}
             />
             <span className="text-xs font-bold text-stone-800 truncate">
@@ -77,7 +77,7 @@ export const CouponRedeemModal: React.FC<CouponRedeemModalProps> = ({
 
         {/* Scrollable body */}
         <div className="overflow-y-auto p-5 space-y-4 no-scrollbar">
-          
+
           {/* バーコード発行前（通常時）だけ表示するエリア */}
           {!isRedeemed && (
             <>
@@ -90,8 +90,8 @@ export const CouponRedeemModal: React.FC<CouponRedeemModalProps> = ({
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                
-                <div 
+
+                <div
                   className="absolute top-3 left-3 text-xs font-bold px-3 py-1 rounded-lg shadow-sm text-white"
                   style={{ backgroundColor: 'var(--theme-primary)' }}
                 >
@@ -171,11 +171,10 @@ export const CouponRedeemModal: React.FC<CouponRedeemModalProps> = ({
               <div className="bg-white p-4 rounded-2xl border border-stone-200 inline-block shadow-sm mx-auto space-y-2 w-full">
                 <div className="flex items-center justify-center gap-0.5 h-16 px-3 bg-stone-50 rounded-xl overflow-hidden">
                   {[...Array(32)].map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={`bg-stone-900 h-12 ${
-                        i % 5 === 0 ? 'w-1.5' : i % 3 === 0 ? 'w-0.5' : i % 2 === 0 ? 'w-1' : 'w-0.5'
-                      }`} 
+                    <div
+                      key={i}
+                      className={`bg-stone-900 h-12 ${i % 5 === 0 ? 'w-1.5' : i % 3 === 0 ? 'w-0.5' : i % 2 === 0 ? 'w-1' : 'w-0.5'
+                        }`}
                     />
                   ))}
                 </div>
@@ -195,7 +194,7 @@ export const CouponRedeemModal: React.FC<CouponRedeemModalProps> = ({
             </div>
           ) : (
             <div className="pt-2 space-y-2.5">
-              
+
               {/* クーポン表示ボタン */}
               <button
                 type="button"
@@ -226,8 +225,8 @@ export const CouponRedeemModal: React.FC<CouponRedeemModalProps> = ({
                 >
                   <span className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center font-bold text-[11px]">¥</span>
                   <span>
-                    {language === 'ja' 
-                      ? `小江戸Payで支払う (¥${coupon.discountPrice.toLocaleString()})` 
+                    {language === 'ja'
+                      ? `小江戸Payで支払う (¥${coupon.discountPrice.toLocaleString()})`
                       : `Pay with Koedo Pay (¥${coupon.discountPrice.toLocaleString()})`}
                   </span>
                 </button>

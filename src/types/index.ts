@@ -1,6 +1,6 @@
 export type Language = 'ja' | 'en';
 
-export type ThemeColorKey = 
+export type ThemeColorKey =
   | 'blue'    // 青
   | 'red'     // 赤
   | 'yellow'  // 黄色
@@ -28,6 +28,8 @@ export type MainTab = 'home' | 'coupons' | 'map' | 'account';
 
 export type CouponCategoryFilter = 'all' | 'time' | 'food_loss';
 export type CouponSortOption = 'distance' | 'deadline' | 'discount';
+export type CouponDayRule = 'all' | 'weekday_only' | 'weekend_only' | 'weekend_holiday';
+export type CouponTimeWindow = 'morning' | 'afternoon' | 'night';
 
 export interface WalletTransaction {
   id: string;
@@ -95,11 +97,14 @@ export interface Coupon {
   originalPrice?: number;
   discountPrice: number;
   imageUrl: string;
-  
+
   // Time coupon specific
   timeSlotJa?: string;
   timeSlotEn?: string;
-  timeSlotType?: 'weekday_afternoon' | 'evening_night' | 'morning';
+  startTime?: string; // HH:MM
+  endTime?: string;   // HH:MM
+  dayRule?: CouponDayRule;
+  timeWindows?: CouponTimeWindow[]; // backwards compatibility for older data
   offPeakReasonJa?: string;
   offPeakReasonEn?: string;
 
