@@ -1,0 +1,6 @@
+{
+  "name": "Kawagoe Smart Coupon - 小江戸スマート巡り",
+  "description": "川越の混雑緩和・フードロス削減・オフピーク誘導・インバウンド多言語対応を実現する小江戸川越スマートクーポンWebアプリ",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
