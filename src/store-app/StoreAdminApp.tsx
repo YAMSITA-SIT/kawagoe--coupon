@@ -37,7 +37,7 @@ type CouponFormState = {
     timeWindows: Array<'morning' | 'afternoon' | 'night'>;
     offPeakReasonJa: string;
     offPeakReasonEn: string;
-    remainingStock: number;
+    remainingStock: number | '';
     foodLossDeadline: string;
     rating: number;
     reviewCount: number;
@@ -88,7 +88,7 @@ const createBlankDraft = (): CouponFormState => ({
     timeWindows: [],
     offPeakReasonJa: '',
     offPeakReasonEn: '',
-    remainingStock: 0,
+    remainingStock: '',
     foodLossDeadline: '',
     rating: 0,
     reviewCount: 0,
@@ -171,7 +171,7 @@ const validateDraftForRequiredFields = (draft: CouponFormState): string | null =
         }
     }
     if (draft.type === 'food_loss' && !draft.foodLossDeadline.trim()) return '当日限定の終了時刻は必須です。';
-    if (draft.type === 'food_loss' && (!draft.remainingStock || draft.remainingStock <= 0)) return '当日限定クーポンの在庫数は必須です。';
+    if (draft.type === 'food_loss' && (typeof draft.remainingStock !== 'number' || draft.remainingStock <= 0)) return '当日限定クーポンの在庫数は必須です。';
     return null;
 };
 
@@ -182,6 +182,7 @@ const buildCouponFromDraft = (draft: CouponFormState, existingId?: string): Stor
     const computedPercent = calculateDiscountPercent(draft.originalPrice, draft.discountPrice);
     const numericOriginalPrice = typeof draft.originalPrice === 'number' ? draft.originalPrice : 0;
     const numericDiscountPrice = typeof draft.discountPrice === 'number' ? draft.discountPrice : 0;
+    const numericRemainingStock = typeof draft.remainingStock === 'number' ? draft.remainingStock : 0;
     const inferredTimeWindows = inferTimeWindows(draft.startTime, draft.endTime);
     const readableTimeRangeJa = buildReadableTimeRange(draft.dayRule, draft.startTime, draft.endTime);
     const readableTimeRangeEn = buildReadableTimeRange(draft.dayRule, draft.startTime, draft.endTime).replace('平日', 'Weekday').replace('土日', 'Weekend').replace('土日祝', 'Weekend & Holiday').replace('いつでも', 'Any day');
@@ -227,7 +228,7 @@ const buildCouponFromDraft = (draft: CouponFormState, existingId?: string): Stor
         timeWindows: normalizedDraft.type === 'time' ? normalizedDraft.timeWindows : undefined,
         offPeakReasonJa: normalizedDraft.type === 'time' ? normalizedDraft.offPeakReasonJa : undefined,
         offPeakReasonEn: normalizedDraft.type === 'time' ? normalizedDraft.offPeakReasonEn : undefined,
-        remainingStock: normalizedDraft.type === 'food_loss' ? normalizedDraft.remainingStock : undefined,
+        remainingStock: normalizedDraft.type === 'food_loss' ? numericRemainingStock : undefined,
         foodLossDeadline: normalizedDraft.type === 'food_loss' ? normalizedDraft.foodLossDeadline : undefined,
         rating: normalizedDraft.rating,
         reviewCount: normalizedDraft.reviewCount,
@@ -286,7 +287,7 @@ export function StoreAdminApp() {
                 discountPercent: 15,
                 originalPrice: 980,
                 discountPrice: 833,
-                imageUrl: '/src/assets/images/tea.png',
+                imageUrl: '/src/assets/images/wagashi.jpg',
                 timeSlotJa: '12:00〜14:00',
                 timeSlotEn: '12:00 - 14:00',
                 dayRule: 'weekday_only',
@@ -374,7 +375,7 @@ export function StoreAdminApp() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<AdminTabKey>('new');
     const [selectedImageName, setSelectedImageName] = useState<string>('');
-    const [showPublishedOnly, setShowPublishedOnly] = useState<boolean>(false);
+    const [showPublishedOnly, setShowPublishedOnly] = useState<boolean>(true);
     const [timePickerTarget, setTimePickerTarget] = useState<'start' | 'end' | null>(null);
     const [timePickerDraft, setTimePickerDraft] = useState<{ field: 'start' | 'end'; hour: string; minute: string } | null>(null);
     const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{ id: string; titleJa: string } | null>(null);
@@ -382,11 +383,12 @@ export function StoreAdminApp() {
     const minuteOptions = useMemo(() => buildMinuteOptions(), []);
 
     const dashboardStats = useMemo(() => {
-        const published = coupons.filter((coupon) => coupon.isPublished).length;
+        const publishedCoupons = coupons.filter((coupon) => coupon.isPublished);
+        const published = publishedCoupons.length;
         const draftCount = coupons.filter((coupon) => !coupon.isPublished).length;
         const total = coupons.length;
         const avgDiscount = Math.round(
-            coupons.reduce((sum, coupon) => sum + (coupon.discountPercent ?? 0), 0) / Math.max(total, 1),
+            publishedCoupons.reduce((sum, coupon) => sum + (coupon.discountPercent ?? 0), 0) / Math.max(published, 1),
         );
 
         return { published, draftCount, total, avgDiscount };
@@ -503,7 +505,7 @@ export function StoreAdminApp() {
             timeWindows: coupon.timeWindows ?? inferTimeWindows(coupon.startTime ?? '10:00', coupon.endTime ?? '15:00'),
             offPeakReasonJa: coupon.offPeakReasonJa ?? '',
             offPeakReasonEn: coupon.offPeakReasonEn ?? '',
-            remainingStock: coupon.remainingStock ?? 0,
+            remainingStock: coupon.remainingStock ?? '',
             foodLossDeadline: coupon.foodLossDeadline ?? '',
             rating: coupon.rating,
             reviewCount: coupon.reviewCount,
@@ -560,8 +562,17 @@ export function StoreAdminApp() {
         );
     };
 
+    const updateRemainingStock = (couponId: string, nextValue: number) => {
+        setCoupons((prev) =>
+            prev.map((coupon) => {
+                if (coupon.id !== couponId || coupon.type !== 'food_loss') return coupon;
+                return { ...coupon, remainingStock: Math.max(0, nextValue) };
+            }),
+        );
+    };
+
     return (
-        <div className="min-h-screen bg-[#f6f1ea] p-4 text-stone-800 md:p-8">
+        <div className="min-h-screen bg-[#f6f1ea] p-3 text-base leading-relaxed text-stone-800 sm:p-4 md:p-8 md:text-[17px]">
             {deleteConfirmTarget && (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-950/45 p-4 sm:items-center">
                     <div className="w-full max-w-sm rounded-[28px] border border-stone-200 bg-white p-5 shadow-2xl">
@@ -574,14 +585,14 @@ export function StoreAdminApp() {
                             <button
                                 type="button"
                                 onClick={() => setDeleteConfirmTarget(null)}
-                                className="flex-1 rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm font-bold text-stone-700"
+                                className="min-h-[48px] flex-1 rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm font-bold text-stone-700 sm:text-base"
                             >
                                 キャンセル
                             </button>
                             <button
                                 type="button"
                                 onClick={confirmDelete}
-                                className="flex-1 rounded-2xl bg-rose-500 px-4 py-3 text-sm font-black text-white shadow-sm"
+                                className="min-h-[48px] flex-1 rounded-2xl bg-rose-500 px-4 py-3 text-sm font-black text-white shadow-sm sm:text-base"
                             >
                                 削除する
                             </button>
@@ -591,33 +602,27 @@ export function StoreAdminApp() {
             )}
 
             <div className="mx-auto max-w-7xl">
-                <header className="mb-6 flex flex-col gap-3 rounded-[28px] bg-gradient-to-r from-[#4a2d2d] via-[#7b4a36] to-[#d98b54] p-5 text-white shadow-lg md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.22em] text-amber-100/80">Store Admin</p>
-                        <h1 className="mt-2 text-2xl font-black tracking-tight">川越お茶専門店 管理画面</h1>
-                    </div>
-                    <div className="flex items-center gap-3 rounded-full bg-white/10 px-3 py-2 text-sm backdrop-blur-sm">
-                        <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                        現在の公開状況: {dashboardStats.published}件公開中
-                    </div>
+                <header className="mb-4 rounded-[24px] bg-gradient-to-r from-[#4a2d2d] via-[#7b4a36] to-[#d98b54] p-4 text-white shadow-lg md:mb-6 md:p-5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-100/80 md:text-xs">Store Admin</p>
+                    <h1 className="mt-2 text-xl font-black tracking-tight md:text-3xl">川越お茶専門店 管理画面</h1>
                 </header>
 
-                <div className="mb-6 grid gap-4 md:grid-cols-4">
-                    <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">Total</p>
-                        <p className="mt-3 text-3xl font-black text-stone-800">{dashboardStats.total}</p>
+                <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+                    <div className="rounded-2xl border border-stone-200 bg-white p-3 shadow-sm md:p-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500 md:text-[12px]">公開中</p>
+                        <p className="mt-2 text-xl font-black text-emerald-600 md:text-[2rem]">{dashboardStats.published}</p>
                     </div>
-                    <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">Published</p>
-                        <p className="mt-3 text-3xl font-black text-emerald-600">{dashboardStats.published}</p>
+                    <div className="rounded-2xl border border-stone-200 bg-white p-3 shadow-sm md:p-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500 md:text-[12px]">非公開・下書き</p>
+                        <p className="mt-2 text-xl font-black text-amber-600 md:text-[2rem]">{dashboardStats.draftCount}</p>
                     </div>
-                    <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">Draft</p>
-                        <p className="mt-3 text-3xl font-black text-amber-600">{dashboardStats.draftCount}</p>
+                    <div className="rounded-2xl border border-stone-200 bg-white p-3 shadow-sm md:p-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500 md:text-[12px]">合計</p>
+                        <p className="mt-2 text-xl font-black text-stone-800 md:text-[2rem]">{dashboardStats.total}</p>
                     </div>
-                    <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">Avg Discount</p>
-                        <p className="mt-3 text-3xl font-black text-stone-800">{dashboardStats.avgDiscount}%</p>
+                    <div className="rounded-2xl border border-stone-200 bg-white p-3 shadow-sm md:p-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500 md:text-[12px]">公開中の平均割引率</p>
+                        <p className="mt-2 text-xl font-black text-stone-800 md:text-[2rem]">{dashboardStats.avgDiscount}%</p>
                     </div>
                 </div>
 
@@ -628,14 +633,14 @@ export function StoreAdminApp() {
                             handleCancelEdit();
                             setActiveTab('new');
                         }}
-                        className={`flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition ${activeTab === 'new' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600'}`}
+                        className={`min-h-[48px] flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition sm:text-base ${activeTab === 'new' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600'}`}
                     >
                         新規作成
                     </button>
                     <button
                         type="button"
                         onClick={() => setActiveTab('registered')}
-                        className={`flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition ${activeTab === 'registered' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600'}`}
+                        className={`min-h-[48px] flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition sm:text-base ${activeTab === 'registered' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600'}`}
                     >
                         登録済み
                     </button>
@@ -645,18 +650,18 @@ export function StoreAdminApp() {
                     <div className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm md:p-5">
                         <div className="mb-4">
                             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">Form</p>
-                            <h2 className="mt-1 text-xl font-black text-stone-800">
+                            <h2 className="mt-1 text-xl font-black text-stone-800 md:text-2xl">
                                 {editingId ? 'クーポン編集' : '新規クーポン登録'}
                             </h2>
                         </div>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">クーポン種別</label>
+                                <label className="mb-1 block text-sm font-semibold uppercase tracking-[0.14em] text-stone-500 md:text-sm">クーポン種別</label>
                                 <select
                                     value={draft.type}
                                     onChange={(e) => updateDraft('type', e.target.value as 'time' | 'food_loss')}
-                                    className="w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition focus:border-amber-500"
+                                    className="min-h-[48px] w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-base outline-none transition focus:border-amber-500 sm:text-[17px]"
                                 >
                                     <option value="time">{couponTypeLabels.time.ja}</option>
                                     <option value="food_loss">{couponTypeLabels.food_loss.ja}</option>
@@ -664,67 +669,67 @@ export function StoreAdminApp() {
                             </div>
 
                             <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
-                                <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500">店舗名</div>
-                                <div className="text-base font-black text-stone-800">{draft.shopNameJa}</div>
+                                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500 md:text-xs">店舗名</div>
+                                <div className="text-lg font-black text-stone-800">{draft.shopNameJa}</div>
                                 <div className="text-sm text-stone-500">{draft.shopNameEn}</div>
                             </div>
 
                             <div>
                                 <div className="mb-1 flex items-center justify-between gap-2">
-                                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">カテゴリ（JA）</label>
-                                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">必須</span>
+                                    <label className="text-sm font-semibold uppercase tracking-[0.14em] text-stone-500">カテゴリ（JA）</label>
+                                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-700">必須</span>
                                 </div>
                                 <input
                                     value={draft.categoryJa}
                                     onChange={(e) => updateDraft('categoryJa', e.target.value)}
                                     placeholder="例：和カフェ・和菓子"
                                     required
-                                    className="w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                    className="min-h-[48px] w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-base outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                 />
                             </div>
 
                             <div>
                                 <div className="mb-1 flex items-center justify-between gap-2">
-                                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">カテゴリ（EN）</label>
-                                    <span className="rounded-full bg-stone-200 px-2 py-0.5 text-[10px] font-bold text-stone-600">任意</span>
+                                    <label className="text-sm font-semibold uppercase tracking-[0.14em] text-stone-500">カテゴリ（EN）</label>
+                                    <span className="rounded-full bg-stone-200 px-2 py-0.5 text-[11px] font-bold text-stone-600">任意</span>
                                 </div>
                                 <input
                                     value={draft.categoryEn}
                                     onChange={(e) => updateDraft('categoryEn', e.target.value)}
                                     placeholder="例：Japanese Cafe & Sweets"
-                                    className="w-full rounded-xl border border-dashed border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                    className="min-h-[48px] w-full rounded-xl border border-dashed border-stone-300 bg-stone-50 px-3 py-2.5 text-base outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                 />
                             </div>
 
                             <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-3">
-                                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500">画像アップロード</div>
+                                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500 md:text-xs">画像アップロード</div>
                                 {draft.imageUrl ? (
                                     <div className="mb-3 overflow-hidden rounded-2xl border border-stone-200 bg-white">
                                         <img src={draft.imageUrl} alt="coupon preview" className="h-36 w-full object-cover" />
                                     </div>
                                 ) : null}
-                                <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-stone-200 bg-white px-3 py-5 text-center transition hover:border-amber-300 hover:bg-amber-50">
+                                <label className="flex min-h-[56px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-stone-200 bg-white px-3 py-5 text-center transition hover:border-amber-300 hover:bg-amber-50">
                                     <span className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-stone-100 text-xl">🖼️</span>
-                                    <span className="text-sm font-semibold text-stone-700">画像を選択</span>
-                                    <span className="mt-1 text-[11px] text-stone-500">PNG / JPG / WEBP</span>
+                                    <span className="text-base font-semibold text-stone-700 sm:text-lg">画像を選択</span>
+                                    <span className="mt-1 text-[11px] text-stone-500 sm:text-xs">PNG / JPG / WEBP</span>
                                     <input type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
                                 </label>
                                 {selectedImageName ? (
-                                    <div className="mt-2 text-[11px] text-stone-500">選択中: {selectedImageName}</div>
+                                    <div className="mt-2 text-[11px] text-stone-500 md:text-sm">選択中: {selectedImageName}</div>
                                 ) : null}
                             </div>
 
                             <div>
                                 <div className="mb-1 flex items-center justify-between gap-2">
-                                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">割引表示（JA）</label>
-                                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">必須</span>
+                                    <label className="text-sm font-semibold uppercase tracking-[0.14em] text-stone-500">割引表示（JA）</label>
+                                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-700">必須</span>
                                 </div>
                                 <input
                                     value={draft.discountBadgeJa}
                                     onChange={(e) => updateDraft('discountBadgeJa', e.target.value)}
                                     placeholder="例：20% OFF 平日限定"
                                     required
-                                    className="w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                    className="min-h-[48px] w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-base outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                 />
                             </div>
 
@@ -737,21 +742,21 @@ export function StoreAdminApp() {
                                     value={draft.discountBadgeEn}
                                     onChange={(e) => updateDraft('discountBadgeEn', e.target.value)}
                                     placeholder="例：20% OFF Weekday Special"
-                                    className="w-full rounded-xl border border-dashed border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                    className="min-h-[48px] w-full rounded-xl border border-dashed border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                 />
                             </div>
 
                             <div>
                                 <div className="mb-1 flex items-center justify-between gap-2">
-                                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">タイトル（JA）</label>
-                                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">必須</span>
+                                    <label className="text-sm font-semibold uppercase tracking-[0.14em] text-stone-500">タイトル（JA）</label>
+                                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-700">必須</span>
                                 </div>
                                 <input
                                     value={draft.titleJa}
                                     onChange={(e) => updateDraft('titleJa', e.target.value)}
                                     placeholder="例：平日限定の抹茶ラテ"
                                     required
-                                    className="w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                    className="min-h-[48px] w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-base outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                 />
                             </div>
 
@@ -764,7 +769,7 @@ export function StoreAdminApp() {
                                     value={draft.titleEn}
                                     onChange={(e) => updateDraft('titleEn', e.target.value)}
                                     placeholder="例：Weekday Matcha Latte 20% OFF"
-                                    className="w-full rounded-xl border border-dashed border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                    className="min-h-[48px] w-full rounded-xl border border-dashed border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                 />
                             </div>
 
@@ -779,7 +784,7 @@ export function StoreAdminApp() {
                                     rows={3}
                                     placeholder="例：落ち着いた茶席で、季節の和菓子とお茶をゆったり楽しめます。"
                                     required
-                                    className="w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                    className="min-h-[96px] w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                 />
                             </div>
 
@@ -793,7 +798,7 @@ export function StoreAdminApp() {
                                     onChange={(e) => updateDraft('descriptionEn', e.target.value)}
                                     rows={3}
                                     placeholder="例：Enjoy a calm tea break with seasonal sweets and a gentle afternoon atmosphere."
-                                    className="w-full rounded-xl border border-dashed border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                    className="min-h-[96px] w-full rounded-xl border border-dashed border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                 />
                             </div>
 
@@ -812,7 +817,7 @@ export function StoreAdminApp() {
                                         }}
                                         placeholder="例：1200"
                                         required
-                                        className="w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                        className="min-h-[48px] w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                     />
                                 </div>
                                 <div>
@@ -829,7 +834,7 @@ export function StoreAdminApp() {
                                         }}
                                         placeholder="例：960"
                                         required
-                                        className="w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                        className="min-h-[48px] w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                     />
                                 </div>
                             </div>
@@ -845,9 +850,12 @@ export function StoreAdminApp() {
                                         <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">在庫数</label>
                                         <input
                                             type="number"
-                                            value={draft.remainingStock}
-                                            onChange={(e) => updateDraft('remainingStock', Number(e.target.value))}
-                                            className="w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition focus:border-amber-500"
+                                            value={draft.remainingStock === '' ? '' : draft.remainingStock}
+                                            onChange={(e) => {
+                                                const rawValue = e.target.value;
+                                                updateDraft('remainingStock', rawValue === '' ? '' : Number(rawValue));
+                                            }}
+                                            className="min-h-[48px] w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition focus:border-amber-500 sm:text-[17px]"
                                         />
                                     </div>
                                 )}
@@ -863,7 +871,7 @@ export function StoreAdminApp() {
                                         <select
                                             value={draft.dayRule}
                                             onChange={(e) => updateDraft('dayRule', e.target.value as 'all' | 'weekday_only' | 'weekend_only' | 'weekend_holiday')}
-                                            className="w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition focus:border-amber-500"
+                                            className="min-h-[48px] w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition focus:border-amber-500 sm:text-[17px]"
                                         >
                                             <option value="all">毎日</option>
                                             <option value="weekday_only">平日</option>
@@ -887,12 +895,12 @@ export function StoreAdminApp() {
                                                         onChange={(e) => updateDraft('startTime', e.target.value)}
                                                         placeholder="09:00"
                                                         aria-label="開始時刻を手入力"
-                                                        className="w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                                        className="min-h-[48px] w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                                     />
                                                     <button
                                                         type="button"
                                                         onClick={() => openTimePicker('start')}
-                                                        className="flex h-[44px] w-[44px] items-center justify-center rounded-xl border border-stone-300 bg-stone-100 text-lg transition hover:bg-stone-200"
+                                                        className="flex h-[48px] w-[48px] items-center justify-center rounded-xl border border-stone-300 bg-stone-100 text-lg transition hover:bg-stone-200"
                                                         aria-label="開始時刻を選択"
                                                     >
                                                         🕒
@@ -977,12 +985,12 @@ export function StoreAdminApp() {
                                                         onChange={(e) => updateDraft('endTime', e.target.value)}
                                                         placeholder="15:00"
                                                         aria-label="終了時刻を手入力"
-                                                        className="w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                                        className="min-h-[48px] w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                                     />
                                                     <button
                                                         type="button"
                                                         onClick={() => openTimePicker('end')}
-                                                        className="flex h-[44px] w-[44px] items-center justify-center rounded-xl border border-stone-300 bg-stone-100 text-lg transition hover:bg-stone-200"
+                                                        className="flex h-[48px] w-[48px] items-center justify-center rounded-xl border border-stone-300 bg-stone-100 text-lg transition hover:bg-stone-200"
                                                         aria-label="終了時刻を選択"
                                                     >
                                                         🕒
@@ -1065,7 +1073,7 @@ export function StoreAdminApp() {
                                         onChange={(e) => updateDraft('foodLossDeadline', e.target.value)}
                                         placeholder="例：18:30"
                                         required
-                                        className="w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500"
+                                        className="min-h-[48px] w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-amber-500 sm:text-[17px]"
                                     />
                                 </div>
                             )}
@@ -1074,14 +1082,14 @@ export function StoreAdminApp() {
                                 <button
                                     type="button"
                                     onClick={handleSaveDraft}
-                                    className="rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm font-bold text-stone-700 transition hover:bg-stone-200"
+                                    className="min-h-[48px] rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm font-bold text-stone-700 transition hover:bg-stone-200 sm:text-base"
                                 >
                                     下書き保存
                                 </button>
                                 <button
                                     type="button"
                                     onClick={handleSubmit}
-                                    className="rounded-2xl bg-gradient-to-r from-[#8b5e3c] to-[#d98b54] px-4 py-3 text-sm font-black text-white shadow-md transition hover:brightness-105"
+                                    className="min-h-[48px] rounded-2xl bg-gradient-to-r from-[#8b5e3c] to-[#d98b54] px-4 py-3 text-sm font-black text-white shadow-md transition hover:brightness-105 sm:text-base"
                                 >
                                     {editingId ? '更新を保存' : 'クーポンを登録'}
                                 </button>
@@ -1093,7 +1101,7 @@ export function StoreAdminApp() {
                         <div className="mb-4 flex items-center justify-between gap-3">
                             <div>
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">Coupon List</p>
-                                <h2 className="mt-1 text-xl font-black text-stone-800">登録済みクーポン</h2>
+                                <h2 className="mt-1 text-xl font-black text-stone-800 md:text-2xl">登録済みクーポン</h2>
                             </div>
                             <button
                                 type="button"
@@ -1101,7 +1109,7 @@ export function StoreAdminApp() {
                                     handleCancelEdit();
                                     setActiveTab('new');
                                 }}
-                                className="rounded-full bg-stone-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-700"
+                                className="min-h-[48px] rounded-full bg-stone-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-700 sm:text-base"
                             >
                                 新規追加
                             </button>
@@ -1110,17 +1118,17 @@ export function StoreAdminApp() {
                         <div className="mb-4 flex gap-2 rounded-full bg-stone-100 p-1">
                             <button
                                 type="button"
-                                onClick={() => setShowPublishedOnly(false)}
-                                className={`flex-1 rounded-full px-3 py-2 text-xs font-bold transition ${!showPublishedOnly ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600'}`}
+                                onClick={() => setShowPublishedOnly(true)}
+                                className={`min-h-[48px] flex-1 rounded-full px-3 py-2 text-xs font-bold transition sm:text-sm ${showPublishedOnly ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600'}`}
                             >
-                                全件
+                                公開中のみ
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setShowPublishedOnly(true)}
-                                className={`flex-1 rounded-full px-3 py-2 text-xs font-bold transition ${showPublishedOnly ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600'}`}
+                                onClick={() => setShowPublishedOnly(false)}
+                                className={`min-h-[48px] flex-1 rounded-full px-3 py-2 text-xs font-bold transition sm:text-sm ${!showPublishedOnly ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600'}`}
                             >
-                                公開中のみ
+                                全件
                             </button>
                         </div>
 
@@ -1128,7 +1136,11 @@ export function StoreAdminApp() {
                             {filteredCoupons.map((coupon) => (
                                 <div
                                     key={coupon.id}
-                                    className="overflow-hidden rounded-[24px] border border-stone-200 bg-stone-50 transition hover:border-stone-300 hover:shadow-md"
+                                    className={`overflow-hidden rounded-[24px] border transition hover:shadow-md ${
+                                        coupon.isPublished
+                                            ? 'border-stone-200 bg-stone-50 hover:border-stone-300'
+                                            : 'border-amber-300 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-100 shadow-sm ring-1 ring-amber-200 hover:border-amber-400'
+                                    }`}
                                 >
                                     <div className="flex flex-col gap-4 p-4 md:flex-row">
                                         <div className="h-28 w-full overflow-hidden rounded-2xl bg-stone-200 md:w-28">
@@ -1141,24 +1153,57 @@ export function StoreAdminApp() {
 
                                         <div className="min-w-0 flex-1">
                                             <div className="mb-2 flex flex-wrap items-center gap-2">
-                                                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-800">
+                                                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800 md:text-xs">
                                                     {coupon.type === 'time' ? couponTypeLabels.time.ja : couponTypeLabels.food_loss.ja}
                                                 </span>
-                                                <span className="rounded-full bg-stone-200 px-2.5 py-1 text-[10px] font-bold text-stone-700">
-                                                    {coupon.isPublished ? '公開中' : '下書き'}
+                                                <span
+                                                    className={`rounded-full px-2.5 py-1 text-[11px] font-bold md:text-xs ${
+                                                        coupon.isPublished
+                                                            ? 'bg-stone-200 text-stone-700'
+                                                            : 'bg-amber-400 text-amber-950 ring-2 ring-amber-200 shadow-sm'
+                                                    }`}
+                                                >
+                                                    {coupon.isPublished ? '公開中' : '非公開'}
                                                 </span>
-                                                <span className="text-[10px] font-semibold text-stone-500">{coupon.shop.nameJa}</span>
+                                                <span className="text-[11px] font-semibold text-stone-500 md:text-xs">{coupon.shop.nameJa}</span>
                                             </div>
 
-                                            <h3 className="text-lg font-black text-stone-900">{coupon.titleJa}</h3>
-                                            <p className="mt-1 text-sm text-stone-600">{coupon.descriptionJa}</p>
+                                            <h3 className="text-xl font-black text-stone-900 md:text-2xl">{coupon.titleJa}</h3>
+                                            <p className="mt-1 text-sm leading-6 text-stone-600 md:text-base">{coupon.descriptionJa}</p>
 
-                                            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-stone-600">
-                                                <span className="rounded-full bg-white px-2 py-1 font-semibold">{coupon.discountBadgeJa}</span>
+                                            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-stone-600 md:text-sm">
+                                                <span className="rounded-full bg-white px-2.5 py-1 font-semibold">{coupon.discountBadgeJa}</span>
                                                 <span>割引率 {coupon.discountPercent ?? 0}%</span>
                                                 <span>通常 {coupon.originalPrice?.toLocaleString() ?? '-'}円</span>
                                                 <span>特価 {coupon.discountPrice.toLocaleString()}円</span>
                                             </div>
+
+                                            {coupon.type === 'food_loss' && (
+                                                <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2">
+                                                    <span className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">在庫数</span>
+                                                    <div className="flex items-center gap-2 rounded-full border border-amber-200 bg-white px-2 py-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => updateRemainingStock(coupon.id, (coupon.remainingStock ?? 0) - 1)}
+                                                            className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-100 text-lg font-bold text-stone-700 transition hover:bg-stone-200"
+                                                            aria-label="在庫を1減らす"
+                                                        >
+                                                            −
+                                                        </button>
+                                                        <span className="min-w-[44px] text-center text-sm font-black text-stone-800 sm:text-base">
+                                                            {coupon.remainingStock ?? 0}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => updateRemainingStock(coupon.id, (coupon.remainingStock ?? 0) + 1)}
+                                                            className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-100 text-lg font-bold text-stone-700 transition hover:bg-stone-200"
+                                                            aria-label="在庫を1増やす"
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1167,21 +1212,21 @@ export function StoreAdminApp() {
                                             <button
                                                 type="button"
                                                 onClick={() => handleEdit(coupon)}
-                                                className="rounded-full border border-stone-300 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:bg-stone-100"
+                                                className="min-h-[40px] rounded-full border border-stone-300 px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:bg-stone-100 sm:text-sm"
                                             >
                                                 編集
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleDuplicate(coupon)}
-                                                className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-100"
+                                                className="min-h-[40px] rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-100 sm:text-sm"
                                             >
                                                 コピーして新規
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleTogglePublish(coupon.id)}
-                                                className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                                                className="min-h-[40px] rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 sm:text-sm"
                                             >
                                                 {coupon.isPublished ? '非公開にする' : '公開する'}
                                             </button>
@@ -1190,7 +1235,7 @@ export function StoreAdminApp() {
                                         <button
                                             type="button"
                                             onClick={() => handleDelete(coupon.id)}
-                                            className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+                                            className="min-h-[40px] rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 sm:text-sm"
                                         >
                                             削除
                                         </button>
