@@ -101,10 +101,13 @@ export interface Coupon {
   // Time coupon specific
   timeSlotJa?: string;
   timeSlotEn?: string;
+  timeSlotType?: string; // backwards compatibility for older data
   startTime?: string; // HH:MM
   endTime?: string;   // HH:MM
+  isWeekdayOnly?: boolean; // backwards compatibility for older data
   dayRule?: CouponDayRule;
   timeWindows?: CouponTimeWindow[]; // backwards compatibility for older data
+  availableTimeSlots?: CouponTimeWindow[]; // backwards compatibility for older data
   offPeakReasonJa?: string;
   offPeakReasonEn?: string;
 

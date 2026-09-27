@@ -6,6 +6,7 @@ import { translations } from '../data/translations';
 interface BottomNavBarProps {
   activeTab: MainTab;
   onChangeTab: (tab: MainTab) => void;
+  onOpenQr?: () => void;
   language: Language;
   themeConfig: ThemeColorConfig;
 }
@@ -13,6 +14,7 @@ interface BottomNavBarProps {
 export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   activeTab,
   onChangeTab,
+  onOpenQr,
   language,
 }) => {
   const t = translations[language];

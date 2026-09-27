@@ -13,6 +13,7 @@ export const THEME_COLORS: Record<ThemeColorKey, ThemeColorConfig> = {
     borderHex: '#2563eb',
     rgb: '37, 99, 235',
   },
+
   red: {
     key: 'red',
     nameJa: '赤',
@@ -25,18 +26,21 @@ export const THEME_COLORS: Record<ThemeColorKey, ThemeColorConfig> = {
     borderHex: '#dc2626',
     rgb: '220, 38, 38',
   },
+
+  // ★ ゴールド・黄色 → ピンクに変更
   yellow: {
     key: 'yellow',
-    nameJa: 'ゴールド・黄色',
-    nameEn: 'Gold / Yellow',
-    subJa: '山吹・金茶',
-    primaryHex: '#f39c12',
-    primaryDarkHex: '#d68910',
-    primaryLightHex: '#fef9e7',
+    nameJa: 'ピンク',
+    nameEn: 'Pink',
+    subJa: '桃色・桜色',
+    primaryHex: '#ec4899',
+    primaryDarkHex: '#db2777',
+    primaryLightHex: '#fdf2f8',
     contrastText: '#ffffff',
-    borderHex: '#f39c12',
-    rgb: '243, 156, 18',
+    borderHex: '#ec4899',
+    rgb: '236, 72, 153',
   },
+
   orange: {
     key: 'orange',
     nameJa: 'オレンジ',
@@ -49,6 +53,7 @@ export const THEME_COLORS: Record<ThemeColorKey, ThemeColorConfig> = {
     borderHex: '#e67e22',
     rgb: '230, 126, 34',
   },
+
   cyan: {
     key: 'cyan',
     nameJa: '水色',
@@ -61,6 +66,7 @@ export const THEME_COLORS: Record<ThemeColorKey, ThemeColorConfig> = {
     borderHex: '#0284c7',
     rgb: '2, 132, 199',
   },
+
   black: {
     key: 'black',
     nameJa: '黒',
@@ -73,6 +79,7 @@ export const THEME_COLORS: Record<ThemeColorKey, ThemeColorConfig> = {
     borderHex: '#3f3f46',
     rgb: '24, 24, 27',
   },
+
   white: {
     key: 'white',
     nameJa: '白',
@@ -81,10 +88,11 @@ export const THEME_COLORS: Record<ThemeColorKey, ThemeColorConfig> = {
     primaryHex: '#ffffff',
     primaryDarkHex: '#e2e8f0',
     primaryLightHex: '#f8fafc',
-    contrastText: '#0f172a', // dark text for contrast on white
+    contrastText: '#0f172a',
     borderHex: '#cbd5e1',
     rgb: '255, 255, 255',
   },
+
   green: {
     key: 'green',
     nameJa: '緑',
@@ -97,6 +105,7 @@ export const THEME_COLORS: Record<ThemeColorKey, ThemeColorConfig> = {
     borderHex: '#16a34a',
     rgb: '22, 163, 74',
   },
+
   purple: {
     key: 'purple',
     nameJa: '紫',
@@ -116,7 +125,9 @@ export const THEME_COLORS: Record<ThemeColorKey, ThemeColorConfig> = {
  */
 export function applyThemeVariables(config: ThemeColorConfig) {
   if (typeof document === 'undefined') return;
+
   const root = document.documentElement;
+
   root.style.setProperty('--theme-primary', config.primaryHex);
   root.style.setProperty('--theme-primary-dark', config.primaryDarkHex);
   root.style.setProperty('--theme-primary-light', config.primaryLightHex);

@@ -8,7 +8,8 @@ import {
   Store, 
   QrCode as QrIcon,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Language, ThemeColorConfig } from '../types';
 import { playChime } from '../utils/audio';
@@ -22,6 +23,15 @@ interface PaymentBarcodeModalProps {
   language: Language;
   themeConfig: ThemeColorConfig;
 }
+
+// 着せ替え用の川越のテーマ画像リスト
+const KISEKAE_PRESETS = [
+  { id: 'tokinokane', nameJa: '時の鐘', path: '/src/assets/images/tokinokane.png' },
+  { id: 'matsuri', nameJa: '川越祭り', path: '/src/assets/images/festevial.png' },
+  { id: 'hikawa', nameJa: '氷川神社', path: '/src/assets/images/hikawazinnjya.png' },
+  { id: 'sweets', nameJa: '川越スイーツ', path: '/src/assets/images/suitu.png' },
+  { id: 'matinami', nameJa: '蔵造りの街並み', path: '/src/assets/images/matinami.png' },
+];
 
 export const PaymentBarcodeModal: React.FC<PaymentBarcodeModalProps> = ({
   isOpen,
@@ -37,6 +47,25 @@ export const PaymentBarcodeModal: React.FC<PaymentBarcodeModalProps> = ({
   const [barcodeNumber, setBarcodeNumber] = useState('2849 5910 8392 4810');
   const [isPaidSuccess, setIsPaidSuccess] = useState(false);
   const [lastPayment, setLastPayment] = useState<{ amount: number; store: string } | null>(null);
+
+  // PayPay着せ替え機能：localStorageから選択中の画像を取得、なければデフォルト（時の鐘）
+  const [currentThemeImg, setCurrentThemeImg] = useState(() => {
+    try {
+      return localStorage.getItem('kawagoe_kisekae_image') || '/src/assets/images/tokinokane.png';
+    } catch {
+      return '/src/assets/images/tokinokane.png';
+    }
+  });
+
+  // モーダルが開いたときに着せ替え画像を再読み込み
+  useEffect(() => {
+    if (isOpen) {
+      try {
+        const saved = localStorage.getItem('kawagoe_kisekae_image');
+        if (saved) setCurrentThemeImg(saved);
+      } catch {}
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -67,6 +96,13 @@ export const PaymentBarcodeModal: React.FC<PaymentBarcodeModalProps> = ({
     setIsPaidSuccess(true);
     setLastPayment({ amount: amt, store: language === 'ja' ? storeJa : storeEn });
     onSimulatePay(amt, storeJa, storeEn);
+  };
+
+  const handleSelectTheme = (path: string) => {
+    setCurrentThemeImg(path);
+    try {
+      localStorage.setItem('kawagoe_kisekae_image', path);
+    } catch {}
   };
 
   const minutes = Math.floor(secondsLeft / 60);
@@ -158,82 +194,125 @@ export const PaymentBarcodeModal: React.FC<PaymentBarcodeModalProps> = ({
             </div>
           ) : (
             <>
-              {/* Payment Card with Barcode & QR Code */}
-              <div className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-sm text-center space-y-4">
-                
-                {/* Barcode Graphic */}
-                <div className="space-y-1">
-                  <div className="h-16 flex items-center justify-center gap-0.5 px-3 py-1 bg-stone-50 rounded-xl border border-stone-200/60 overflow-hidden">
-                    {/* Simulated Authentic Barcode Lines */}
-                    {[
-                      3, 1, 2, 4, 1, 3, 1, 2, 1, 4, 2, 1, 3, 2, 1, 3, 1, 4, 2, 1,
-                      2, 3, 1, 2, 4, 1, 2, 3, 1, 4, 1, 2, 3, 2, 1, 4, 1, 2, 3, 1,
-                      3, 1, 2, 4, 1, 3, 1, 2, 1, 4, 2, 1, 3, 2, 1, 3, 1, 4, 2, 1
-                    ].map((width, idx) => (
-                      <span
-                        key={idx}
-                        className="h-12 bg-stone-900 inline-block shrink-0"
-                        style={{ width: `${width}px`, margin: '0 0.5px' }}
+              {/* ========================================== */}
+              {/* 🌟 PayPay風 着せ替えカードセクション */}
+              {/* ========================================== */}
+              <div className="bg-white rounded-3xl overflow-hidden border border-stone-200 shadow-md">
+                {/* 着せ替え背景画像バナー */}
+                <div className="relative h-28 w-full overflow-hidden bg-stone-900">
+                  <img 
+                    src={currentThemeImg} 
+                    alt="Kawagoe Kisekae Theme"
+                    className="w-full h-full object-cover opacity-90"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-between p-3">
+                    <span className="text-white text-[11px] font-bold bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-white/20">
+                      {language === 'ja' ? '小江戸川越 着せ替えデザイン' : 'Koedo Kisekae Theme'}
+                    </span>
+                    <span className="text-[10px] text-amber-300 font-bold bg-black/40 backdrop-blur-xs px-2 py-0.5 rounded">
+                      PayPay風
+                    </span>
+                  </div>
+                </div>
+
+                {/* その場でサクッと切り替えられるサムネイル選択バー */}
+                <div className="px-3 py-2 bg-stone-50 border-b border-stone-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                  <span className="text-[10px] font-bold text-stone-400 shrink-0 mr-0.5">着せ替え:</span>
+                  {KISEKAE_PRESETS.map((preset) => {
+                    const isSelected = currentThemeImg === preset.path;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => handleSelectTheme(preset.path)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${
+                          isSelected 
+                            ? 'bg-stone-900 text-white shadow-2xs' 
+                            : 'bg-white text-stone-600 hover:bg-stone-200 border border-stone-200'
+                        }`}
+                      >
+                        {preset.nameJa}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Barcode & QR Code Body */}
+                <div className="p-4 text-center space-y-4">
+                  {/* Barcode Graphic */}
+                  <div className="space-y-1">
+                    <div className="h-16 flex items-center justify-center gap-0.5 px-3 py-1 bg-stone-50 rounded-xl border border-stone-200/60 overflow-hidden">
+                      {[
+                        3, 1, 2, 4, 1, 3, 1, 2, 1, 4, 2, 1, 3, 2, 1, 3, 1, 4, 2, 1,
+                        2, 3, 1, 2, 4, 1, 2, 3, 1, 4, 1, 2, 3, 2, 1, 4, 1, 2, 3, 1,
+                        3, 1, 2, 4, 1, 3, 1, 2, 1, 4, 2, 1, 3, 2, 1, 3, 1, 4, 2, 1
+                      ].map((width, idx) => (
+                        <span
+                          key={idx}
+                          className="h-12 bg-stone-900 inline-block shrink-0"
+                          style={{ width: `${width}px`, margin: '0 0.5px' }}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="text-xs font-mono font-bold tracking-widest text-stone-700">
+                      {barcodeNumber}
+                    </div>
+                  </div>
+
+                  {/* QR Code Center View */}
+                  <div className="flex flex-col items-center justify-center py-1">
+                    <div className="w-36 h-36 p-2.5 bg-white border-2 border-stone-900 rounded-2xl shadow-xs flex items-center justify-center">
+                      <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=KAWAGOE-PAY-${barcodeNumber.replace(/\s/g, '')}`}
+                        alt="Payment QR"
+                        className="w-full h-full object-contain"
                       />
-                    ))}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2 text-[11px] text-stone-500 font-semibold">
+                      <span>
+                        {language === 'ja' ? '有効期限:' : 'Valid:'}{' '}
+                        <strong className="text-stone-800 tabular-nums">
+                          {minutes}:{seconds < 10 ? `0${seconds}` : seconds}
+                        </strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleRefreshCode}
+                        className="flex items-center gap-0.5 text-amber-700 hover:text-amber-800 text-[10px] font-bold"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>{language === 'ja' ? '更新' : 'Refresh'}</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="text-xs font-mono font-bold tracking-widest text-stone-700">
-                    {barcodeNumber}
-                  </div>
-                </div>
+                  {/* Balance & Points Option */}
+                  <div className="bg-stone-50 rounded-2xl p-3 border border-stone-200/80 text-left space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-stone-500 font-medium">
+                        {language === 'ja' ? 'お支払い可能残高' : 'Usable Balance'}
+                      </span>
+                      <span className="text-base font-black text-stone-900 tabular-nums">
+                        ¥{balance.toLocaleString()}
+                      </span>
+                    </div>
 
-                {/* QR Code Center View */}
-                <div className="flex flex-col items-center justify-center py-1">
-                  <div className="w-36 h-36 p-2.5 bg-white border-2 border-stone-900 rounded-2xl shadow-xs flex items-center justify-center">
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=KAWAGOE-PAY-${barcodeNumber.replace(/\s/g, '')}`}
-                      alt="Payment QR"
-                      className="w-full h-full object-contain"
-                    />
+                    <label className="flex items-center justify-between pt-1 border-t border-stone-200/60 cursor-pointer select-none">
+                      <span className="text-xs text-stone-700 flex items-center gap-1 font-medium">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                        <span>{language === 'ja' ? 'ポイントを利用' : 'Use points'}</span>
+                        <span className="text-[10px] text-stone-400">({points} pt)</span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={usePoints}
+                        onChange={(e) => setUsePoints(e.target.checked)}
+                        className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 accent-amber-600"
+                      />
+                    </label>
                   </div>
-                  <div className="flex items-center gap-2 mt-2 text-[11px] text-stone-500 font-semibold">
-                    <span>
-                      {language === 'ja' ? '有効期限:' : 'Valid:'}{' '}
-                      <strong className="text-stone-800 tabular-nums">
-                        {minutes}:{seconds < 10 ? `0${seconds}` : seconds}
-                      </strong>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleRefreshCode}
-                      className="flex items-center gap-0.5 text-amber-700 hover:text-amber-800 text-[10px] font-bold"
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                      <span>{language === 'ja' ? '更新' : 'Refresh'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Balance & Points Option */}
-                <div className="bg-stone-50 rounded-2xl p-3 border border-stone-200/80 text-left space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-stone-500 font-medium">
-                      {language === 'ja' ? 'お支払い可能残高' : 'Usable Balance'}
-                    </span>
-                    <span className="text-base font-black text-stone-900 tabular-nums">
-                      ¥{balance.toLocaleString()}
-                    </span>
-                  </div>
-
-                  <label className="flex items-center justify-between pt-1 border-t border-stone-200/60 cursor-pointer select-none">
-                    <span className="text-xs text-stone-700 flex items-center gap-1 font-medium">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>{language === 'ja' ? 'ポイントを利用' : 'Use points'}</span>
-                      <span className="text-[10px] text-stone-400">({points} pt)</span>
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={usePoints}
-                      onChange={(e) => setUsePoints(e.target.checked)}
-                      className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 accent-amber-600"
-                    />
-                  </label>
                 </div>
               </div>
 

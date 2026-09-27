@@ -20,6 +20,8 @@ interface KawagoeMapTabProps {
   language: Language;
   themeConfig: ThemeColorConfig;
   onSelectCoupon: (coupon: Coupon) => void;
+  mapMode?: 'normal' | 'night';
+  initialCouponId?: string | null;
 }
 
 export const KawagoeMapTab: React.FC<KawagoeMapTabProps> = ({
@@ -27,11 +29,19 @@ export const KawagoeMapTab: React.FC<KawagoeMapTabProps> = ({
   language,
   themeConfig,
   onSelectCoupon,
+  mapMode = 'normal',
+  initialCouponId = null,
 }) => {
   const t = translations[language];
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'time' | 'food_loss' | 'far'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPinCouponId, setSelectedPinCouponId] = useState<string | null>(coupons[0]?.id || null);
+  const [selectedPinCouponId, setSelectedPinCouponId] = useState<string | null>(initialCouponId ?? coupons[0]?.id ?? null);
+
+  useEffect(() => {
+    if (initialCouponId) {
+      setSelectedPinCouponId(initialCouponId);
+    }
+  }, [initialCouponId]);
 
   // Mapbox用のRef
   const mapContainerRef = useRef<HTMLDivElement>(null);

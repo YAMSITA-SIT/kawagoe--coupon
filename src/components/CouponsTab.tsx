@@ -8,7 +8,8 @@ interface CouponsTabProps {
   language: Language;
   themeConfig: ThemeColorConfig;
   onSelectCoupon: (coupon: Coupon) => void;
-  onOpenNewCouponModal: () => void;
+  onOpenMap?: (coupon: Coupon) => void;
+  onOpenNewCouponModal?: () => void;
 }
 
 export const CouponsTab: React.FC<CouponsTabProps> = ({
@@ -16,6 +17,7 @@ export const CouponsTab: React.FC<CouponsTabProps> = ({
   language,
   themeConfig,
   onSelectCoupon,
+  onOpenMap,
   onOpenNewCouponModal,
 }) => {
   const t = translations[language];
@@ -38,7 +40,9 @@ export const CouponsTab: React.FC<CouponsTabProps> = ({
     return matchesSearch;
   }).sort((a, b) => {
     if (sortBy === 'near') return a.shop.walkingMinutes - b.shop.walkingMinutes;
-    if (sortBy === 'discount') return b.discountPercent - a.discountPercent;
+    if (sortBy === 'discount') {
+      return (b.discountPercent ?? 0) - (a.discountPercent ?? 0);
+    }
     return 0;
   });
 
@@ -56,15 +60,17 @@ export const CouponsTab: React.FC<CouponsTabProps> = ({
       </div>
 
       {/* 新着クーポン追加ボタン */}
-      <button
-        type="button"
-        onClick={onOpenNewCouponModal}
-        className="w-full h-12 rounded-2xl font-bold text-xs text-white flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-all"
-        style={{ backgroundColor: themeConfig.primaryHex }}
-      >
-        <Plus className="w-4 h-4" />
-        <span>{language === 'ja' ? '+新着クーポン・特典を探す' : '+ Find New Coupons'}</span>
-      </button>
+      {onOpenNewCouponModal && (
+        <button
+          type="button"
+          onClick={onOpenNewCouponModal}
+          className="w-full h-12 rounded-2xl font-bold text-xs text-white flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-all"
+          style={{ backgroundColor: themeConfig.primaryHex }}
+        >
+          <Plus className="w-4 h-4" />
+          <span>{language === 'ja' ? '+新着クーポン・特典を探す' : '+ Find New Coupons'}</span>
+        </button>
+      )}
 
       {/* 検索バー */}
       <div className="relative">
@@ -159,56 +165,75 @@ export const CouponsTab: React.FC<CouponsTabProps> = ({
         {filteredCoupons.map((coupon) => (
           <div
             key={coupon.id}
-            onClick={() => onSelectCoupon(coupon)}
-            // 修正3：右側の不要な丸い矢印アイコンを削除し、カード全体をクリックしやすくしました
-            className="bg-white rounded-2xl p-3.5 border border-stone-200 shadow-sm hover:shadow-md transition-all flex items-center gap-3.5 cursor-pointer"
+            className="bg-white rounded-2xl p-3.5 border border-stone-200 shadow-sm hover:shadow-md transition-all"
           >
-            <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-stone-100 shrink-0">
-              <img
-                src={coupon.imageUrl}
-                alt={coupon.titleJa}
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-              <div
-                className="absolute bottom-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded text-white shadow-xs"
-                style={{ backgroundColor: themeConfig.primaryHex }}
-              >
-                {coupon.discountPercent}%
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              {/* 修正2：店舗名が途切れずにしっかり表示されるように修正 */}
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] font-bold text-stone-800 leading-tight">
-                  {language === 'ja' ? coupon.shop.nameJa : coupon.shop.nameEn}
-                </span>
-                <span className="text-[10px] text-stone-500 shrink-0 ml-1">
-                  徒歩{coupon.shop.walkingMinutes}分
-                </span>
+            <div
+              onClick={() => onSelectCoupon(coupon)}
+              className="flex items-center gap-3.5 cursor-pointer"
+            >
+              <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-stone-100 shrink-0">
+                <img
+                  src={coupon.imageUrl}
+                  alt={coupon.titleJa}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+                <div
+                  className="absolute bottom-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded text-white shadow-xs"
+                  style={{ backgroundColor: themeConfig.primaryHex }}
+                >
+                  {coupon.discountPercent}%
+                </div>
               </div>
 
-              <h4 className="text-xs font-bold text-stone-900 line-clamp-2 leading-snug">
-                {language === 'ja' ? coupon.titleJa : coupon.titleEn}
-              </h4>
-
-              <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-sm font-bold text-stone-900 tabular-nums">
-                  ¥{coupon.discountPrice.toLocaleString()}
-                </span>
-                {coupon.originalPrice && (
-                  <span className="text-[10px] text-stone-400 line-through tabular-nums">
-                    ¥{coupon.originalPrice.toLocaleString()}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-bold text-stone-800 leading-tight">
+                    {language === 'ja' ? coupon.shop.nameJa : coupon.shop.nameEn}
                   </span>
-                )}
-                <span className="text-[10px] font-semibold text-stone-600 ml-auto">
-                  {coupon.type === 'time'
-                    ? (language === 'ja' ? coupon.timeSlotJa : coupon.timeSlotEn)
-                    : `残り${coupon.remainingStock}点`}
-                </span>
+                  <span className="text-[10px] text-stone-500 shrink-0 ml-1">
+                    徒歩{coupon.shop.walkingMinutes}分
+                  </span>
+                </div>
+
+                <h4 className="text-xs font-bold text-stone-900 line-clamp-2 leading-snug">
+                  {language === 'ja' ? coupon.titleJa : coupon.titleEn}
+                </h4>
+
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-sm font-bold text-stone-900 tabular-nums">
+                    ¥{coupon.discountPrice.toLocaleString()}
+                  </span>
+                  {coupon.originalPrice && (
+                    <span className="text-[10px] text-stone-400 line-through tabular-nums">
+                      ¥{coupon.originalPrice.toLocaleString()}
+                    </span>
+                  )}
+                  <span className="text-[10px] font-semibold text-stone-600 ml-auto">
+                    {coupon.type === 'time'
+                      ? (language === 'ja' ? coupon.timeSlotJa : coupon.timeSlotEn)
+                      : `残り${coupon.remainingStock}点`}
+                  </span>
+                </div>
               </div>
             </div>
+
+            {onOpenMap && (
+              <div className="mt-3 pt-3 border-t border-stone-100 flex justify-end">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenMap(coupon);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-white shadow-sm"
+                  style={{ backgroundColor: themeConfig.primaryHex }}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  {language === 'ja' ? 'マップ表示' : 'Map'}
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
